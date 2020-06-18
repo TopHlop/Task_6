@@ -7,6 +7,7 @@ import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
+import androidx.camera.core.ImageCaptureException;
 import androidx.camera.core.Preview;
 import androidx.camera.extensions.HdrImageCaptureExtender;
 import androidx.camera.lifecycle.ProcessCameraProvider;
@@ -14,7 +15,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
 
-import android.content.SharedPreferences;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 
 import android.os.Bundle;
@@ -24,15 +25,19 @@ import android.widget.Toast;
 import com.example.task_6.databinding.ActivityMainBinding;
 import com.google.common.util.concurrent.ListenableFuture;
 
+import java.io.File;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
-    private int REQUEST_CODE_PERMISSIONS = 101;
-    private final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA",
+    private static final int REQUEST_CODE_PERMISSIONS = 101;
+    private static final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA",
             "android.permission.WRITE_EXTERNAL_STORAGE"};
+    public static final String TEMP_IMAGE = "temp.jpg";
 
-    ProcessCameraProvider cameraProvider;
+    private ProcessCameraProvider cameraProvider;
+    private ImageCapture imageCapture;
 
     private ActivityMainBinding binding;
 
@@ -53,14 +58,29 @@ public class MainActivity extends AppCompatActivity {
         binding.cameraButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                File tempFile = new File(getApplication().getCacheDir(), TEMP_IMAGE);
+                ImageCapture.OutputFileOptions outputFileOptions =
+                        new ImageCapture.OutputFileOptions.Builder(tempFile).build();
+                imageCapture.takePicture(outputFileOptions, Executors.newSingleThreadExecutor(), new ImageCapture.OnImageSavedCallback() {
+                    @Override
+                    public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+                        Intent intent = new Intent(MainActivity.this, SaveImageActivity.class);
+                        startActivity(intent);
+                        finish();
+                    }
 
+                    @Override
+                    public void onError(@NonNull ImageCaptureException exception) {
+                        exception.printStackTrace();
+                    }
+                });
             }
         });
 
         binding.cameraViewButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(CameraSharedPreferences.isBackCamera()) {
+                if (CameraSharedPreferences.isBackCamera()) {
                     CameraSharedPreferences.setIsBackCamera(false);
                     startCamera();
                     binding.cameraViewButton.setImageResource(R.mipmap.ic_front_camera);
@@ -77,9 +97,11 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
                 if (CameraSharedPreferences.isCameraFlash()) {
                     CameraSharedPreferences.setIsCameraFlash(false);
+                    imageCapture.setFlashMode(ImageCapture.FLASH_MODE_OFF);
                     binding.flashButton.setImageResource(R.mipmap.ic_flash_off);
                 } else {
                     CameraSharedPreferences.setIsCameraFlash(true);
+                    imageCapture.setFlashMode(ImageCapture.FLASH_MODE_ON);
                     binding.flashButton.setImageResource(R.mipmap.ic_flash_on);
                 }
             }
@@ -120,7 +142,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     cameraProvider = cameraProviderFuture.get();
                     //Front camera check
-                    if(!cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)){
+                    if (!cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
                         binding.cameraViewButton.setEnabled(false);
                     }
                     bindCamera(cameraProvider);
@@ -131,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
         }, ContextCompat.getMainExecutor(this));
     }
 
-    private void bindCamera(ProcessCameraProvider cameraProvider){
+    private void bindCamera(ProcessCameraProvider cameraProvider) {
         Preview preview = new Preview.Builder().build();
 
         CameraSelector cameraSelector = new CameraSelector.Builder()
@@ -148,13 +170,38 @@ public class MainActivity extends AppCompatActivity {
             hdrImageCaptureExtender.enableExtension(cameraSelector);
         }
 
-        final ImageCapture imageCapture = builder
+        imageCapture = builder
                 .setTargetRotation(this.getWindowManager().getDefaultDisplay().getRotation())
+                .setFlashMode(CameraSharedPreferences.isCameraFlash() ?
+                        ImageCapture.FLASH_MODE_ON : ImageCapture.FLASH_MODE_OFF)
                 .build();
+        /*OrientationEventListener orientationEventListener = new OrientationEventListener(this) {
+            @Override
+            public void onOrientationChanged(int orientation) {
+                int rotation;
+                // Monitors orientation values to determine the target rotation value
+                if (orientation >= 45 && orientation < 135) {
+                    rotation = Surface.ROTATION_270;
+                } else if (orientation >= 135 && orientation < 225) {
+                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams
+                            (LinearLayout.LayoutParams.MATCH_PARENT, 200);
+                    layoutParams.gravity = Gravity.TOP;
+                    binding.cameraButton.setLayoutParams(layoutParams);
+                    rotation = Surface.ROTATION_180;
+                } else if (orientation >= 225 && orientation < 315) {
+                    rotation = Surface.ROTATION_90;
+                } else {
+                    rotation = Surface.ROTATION_0;
+                }
+                Log.i("orientation", String.valueOf(orientation));
+                imageCapture.setTargetRotation(rotation);
+            }
+        };
+        orientationEventListener.enable();*/
+
         cameraProvider.unbindAll();
         Camera camera = cameraProvider.bindToLifecycle((LifecycleOwner) this, cameraSelector,
                 preview, imageAnalysis, imageCapture);
-        camera.getCameraControl().enableTorch(CameraSharedPreferences.isCameraFlash());
         preview.setSurfaceProvider(binding.previewView.createSurfaceProvider());
     }
 
@@ -162,11 +209,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         CameraSharedPreferences.saveSettings(this);
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
         cameraProvider.unbindAll();
     }
 }

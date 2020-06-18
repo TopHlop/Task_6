@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">Task_6</string>
+    <string name="save_button">Save</string>
+    <string name="cancel_button">Cancel</string>
+    <string name="ok_button">OK</string>
+    <string name="save_dialog_text">Enter image name:</string>
+    <string name="file_name_use_message">File name is already in use.</string>
+    <string name="saved_successfully">Image saved successfully</string>
 </resources>
