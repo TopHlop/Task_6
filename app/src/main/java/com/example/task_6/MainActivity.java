@@ -19,6 +19,7 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 
 import android.os.Bundle;
+import android.view.KeyEvent;
 import android.view.View;
 import android.widget.Toast;
 
@@ -46,7 +47,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        CameraSharedPreferences.loadSettings(this);
 
         if (allPermissionsGranted()) {
             startCamera();
@@ -54,26 +54,12 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this,
                     REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
+        initializeViews();
 
         binding.cameraButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                File tempFile = new File(getApplication().getCacheDir(), TEMP_IMAGE);
-                ImageCapture.OutputFileOptions outputFileOptions =
-                        new ImageCapture.OutputFileOptions.Builder(tempFile).build();
-                imageCapture.takePicture(outputFileOptions, Executors.newSingleThreadExecutor(), new ImageCapture.OnImageSavedCallback() {
-                    @Override
-                    public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
-                        Intent intent = new Intent(MainActivity.this, SaveImageActivity.class);
-                        startActivity(intent);
-                        finish();
-                    }
-
-                    @Override
-                    public void onError(@NonNull ImageCaptureException exception) {
-                        exception.printStackTrace();
-                    }
-                });
+                takePicture();
             }
         });
 
@@ -106,6 +92,34 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+    }
+
+    private void takePicture() {
+        File tempFile = new File(getApplication().getCacheDir(), TEMP_IMAGE);
+        ImageCapture.OutputFileOptions outputFileOptions =
+                new ImageCapture.OutputFileOptions.Builder(tempFile).build();
+        imageCapture.takePicture(outputFileOptions, Executors.newSingleThreadExecutor(), new ImageCapture.OnImageSavedCallback() {
+            @Override
+            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+                Intent intent = new Intent(MainActivity.this, SaveImageActivity.class);
+                startActivity(intent);
+                finish();
+            }
+
+            @Override
+            public void onError(@NonNull ImageCaptureException exception) {
+                exception.printStackTrace();
+            }
+        });
+    }
+
+    private void initializeViews() {
+        binding.flashButton.setImageResource(CameraSharedPreferences.isCameraFlash() ?
+                R.mipmap.ic_flash_on :
+                R.mipmap.ic_flash_off);
+        binding.cameraViewButton.setImageResource(CameraSharedPreferences.isBackCamera() ?
+                R.mipmap.ic_back_camera :
+                R.mipmap.ic_front_camera);
     }
 
     private boolean allPermissionsGranted() {
@@ -206,9 +220,32 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            takePicture();
+            return true;
+        }
+        else {
+            return super.onKeyDown(keyCode, event);
+        }
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         CameraSharedPreferences.saveSettings(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        CameraSharedPreferences.loadSettings(this);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
         cameraProvider.unbindAll();
     }
+
 }
