@@ -9,16 +9,9 @@
     <androidx.camera.view.PreviewView
         android:id="@+id/preview_view"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
+        android:layout_height="match_parent">
 
-    <ImageButton
-        android:id="@+id/camera_button"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center_horizontal"
-        android:background="@null"
-        android:padding="8dp"
-        app:srcCompat="@mipmap/ic_camera" />
+    </androidx.camera.view.PreviewView>
 
     <LinearLayout
         android:id="@+id/seting_buttons_layout"
@@ -42,5 +35,14 @@
             android:background="@null"
             app:srcCompat="@mipmap/ic_flash_off" />
     </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/camera_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="right|center_vertical"
+        android:background="@null"
+        android:padding="8dp"
+        app:srcCompat="@mipmap/ic_camera" />
 
 </FrameLayout>

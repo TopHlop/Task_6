@@ -189,29 +189,6 @@ public class MainActivity extends AppCompatActivity {
                 .setFlashMode(CameraSharedPreferences.isCameraFlash() ?
                         ImageCapture.FLASH_MODE_ON : ImageCapture.FLASH_MODE_OFF)
                 .build();
-        /*OrientationEventListener orientationEventListener = new OrientationEventListener(this) {
-            @Override
-            public void onOrientationChanged(int orientation) {
-                int rotation;
-                // Monitors orientation values to determine the target rotation value
-                if (orientation >= 45 && orientation < 135) {
-                    rotation = Surface.ROTATION_270;
-                } else if (orientation >= 135 && orientation < 225) {
-                    FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams
-                            (LinearLayout.LayoutParams.MATCH_PARENT, 200);
-                    layoutParams.gravity = Gravity.TOP;
-                    binding.cameraButton.setLayoutParams(layoutParams);
-                    rotation = Surface.ROTATION_180;
-                } else if (orientation >= 225 && orientation < 315) {
-                    rotation = Surface.ROTATION_90;
-                } else {
-                    rotation = Surface.ROTATION_0;
-                }
-                Log.i("orientation", String.valueOf(orientation));
-                imageCapture.setTargetRotation(rotation);
-            }
-        };
-        orientationEventListener.enable();*/
 
         cameraProvider.unbindAll();
         Camera camera = cameraProvider.bindToLifecycle((LifecycleOwner) this, cameraSelector,

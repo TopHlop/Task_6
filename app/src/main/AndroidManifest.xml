@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     package="com.example.task_6">
 
     <uses-feature android:name="android.hardware.camera.any" />
@@ -15,7 +16,11 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <activity android:name=".SaveImageActivity"/>
-        <activity android:name=".MainActivity">
+        <activity android:name=".MainActivity"
+            android:screenOrientation="fullUser"
+            android:configChanges="orientation|keyboardHidden|screenSize"
+            android:rotationAnimation="seamless"
+            tools:targetApi="O">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
