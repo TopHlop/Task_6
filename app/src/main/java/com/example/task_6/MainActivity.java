@@ -15,12 +15,19 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
 
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 
+import android.content.res.Configuration;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.OrientationEventListener;
+import android.view.Surface;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import com.example.task_6.databinding.ActivityMainBinding;
@@ -47,6 +54,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+        CameraSharedPreferences.loadSettings(this);
 
         if (allPermissionsGranted()) {
             startCamera();
@@ -178,9 +186,7 @@ public class MainActivity extends AppCompatActivity {
         ImageCapture.Builder builder = new ImageCapture.Builder();
 
         HdrImageCaptureExtender hdrImageCaptureExtender = HdrImageCaptureExtender.create(builder);
-        // Query if extension is available (optional).
         if (hdrImageCaptureExtender.isExtensionAvailable(cameraSelector)) {
-            // Enable the extension if available.
             hdrImageCaptureExtender.enableExtension(cameraSelector);
         }
 
@@ -190,19 +196,66 @@ public class MainActivity extends AppCompatActivity {
                         ImageCapture.FLASH_MODE_ON : ImageCapture.FLASH_MODE_OFF)
                 .build();
 
+        OrientationEventListener orientationEventListener = new OrientationEventListener((Context) this) {
+            @Override
+            public void onOrientationChanged(int orientation) {
+                int rotation;
+
+                if (orientation >= 45 && orientation < 135) {
+                    rotation = Surface.ROTATION_270;
+                } else if (orientation >= 135 && orientation < 225) {
+                    rotation = Surface.ROTATION_180;
+                } else if (orientation >= 225 && orientation < 315) {
+                    rotation = Surface.ROTATION_90;
+                } else {
+                    rotation = Surface.ROTATION_0;
+                }
+                imageCapture.setTargetRotation(rotation);
+            }
+        };
+
+        orientationEventListener.enable();
+
         cameraProvider.unbindAll();
         Camera camera = cameraProvider.bindToLifecycle((LifecycleOwner) this, cameraSelector,
                 preview, imageAnalysis, imageCapture);
         preview.setSurfaceProvider(binding.previewView.createSurfaceProvider());
     }
 
+    /*private void setUpTapToFocus(MotionEvent event) {
+        final float x = (event != null) ? event.getX() : getV
+    }*/
+
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        //changed gravity of the camera button
+        switch (getWindowManager().getDefaultDisplay().getRotation()) {
+            case Surface.ROTATION_0:
+            case Surface.ROTATION_180: {
+                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams
+                        (ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
+                binding.cameraButton.setLayoutParams(layoutParams);
+                break;
+            }
+            case Surface.ROTATION_90:
+            case Surface.ROTATION_270: {
+                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams
+                        (ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                layoutParams.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
+                binding.cameraButton.setLayoutParams(layoutParams);
+                break;
+            }
+        }
+    }
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if(keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
             takePicture();
             return true;
-        }
-        else {
+        } else {
             return super.onKeyDown(keyCode, event);
         }
     }
