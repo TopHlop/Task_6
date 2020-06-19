@@ -15,6 +15,8 @@ import android.widget.Toast;
 import com.example.task_6.databinding.ActivitySaveImageBinding;
 import com.example.task_6.databinding.DialogSaveImageBinding;
 
+import com.squareup.picasso.MemoryPolicy;
+import com.squareup.picasso.Picasso;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -33,7 +35,13 @@ public class SaveImageActivity extends AppCompatActivity {
         binding = ActivitySaveImageBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         String tempPath = getApplication().getCacheDir() + "/" + MainActivity.TEMP_IMAGE;
-        binding.imageView.setImageURI(Uri.parse(tempPath));
+
+        Picasso.get()
+                .load(Uri.parse("file://" + tempPath))
+                .resize(1000, 1000)
+                .centerInside()
+                .memoryPolicy(MemoryPolicy.NO_CACHE)
+                .into(binding.imageView);
         File tempImage = new File(tempPath);
 
         binding.saveButton.setOnClickListener(new View.OnClickListener() {

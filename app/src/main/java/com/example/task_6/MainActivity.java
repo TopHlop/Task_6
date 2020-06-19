@@ -100,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+        setGravityButtonDependingOnOrientation();
     }
 
     private void takePicture() {
@@ -229,6 +230,10 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
+        setGravityButtonDependingOnOrientation();
+    }
+
+    private void setGravityButtonDependingOnOrientation() {
         //changed gravity of the camera button
         switch (getWindowManager().getDefaultDisplay().getRotation()) {
             case Surface.ROTATION_0:
