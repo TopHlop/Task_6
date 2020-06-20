@@ -3,26 +3,36 @@ package com.example.task_6;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.Camera;
+import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraSelector;
+import androidx.camera.core.FocusMeteringAction;
+import androidx.camera.core.FocusMeteringResult;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
+import androidx.camera.core.MeteringPoint;
+import androidx.camera.core.MeteringPointFactory;
 import androidx.camera.core.Preview;
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory;
 import androidx.camera.extensions.HdrImageCaptureExtender;
 import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.camera.view.TextureViewMeteringPointFactory;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 
 import android.content.res.Configuration;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.View;
@@ -45,10 +55,12 @@ public class MainActivity extends AppCompatActivity {
     public static final String TEMP_IMAGE = "temp.jpg";
 
     private ProcessCameraProvider cameraProvider;
+    private Camera camera;
     private ImageCapture imageCapture;
 
     private ActivityMainBinding binding;
 
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -100,7 +112,49 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        binding.previewView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()){
+                    case MotionEvent.ACTION_DOWN: {
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP: {
+                        return focus(event);
+                    }
+                    default: {return false;}
+                }
+            }
+        });
+
+        binding.noFocusButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                camera.getCameraControl().cancelFocusAndMetering();
+                binding.noFocusButton.setVisibility(View.GONE);
+            }
+        });
+
         setGravityButtonDependingOnOrientation();
+    }
+
+    private boolean focus(MotionEvent event) {
+        final float x = event.getX();
+        final float y = event.getY();
+        MeteringPointFactory factory = new SurfaceOrientedMeteringPointFactory(
+                binding.previewView.getWidth(), binding.previewView.getHeight());
+        float afPointWidth = 1.0f / 6.0f;
+        float aePointWidth = afPointWidth * 1.5f;
+        MeteringPoint afPoint = factory.createPoint(x, y, afPointWidth);
+        MeteringPoint aePoint = factory.createPoint(x, y, aePointWidth);
+
+        camera.getCameraControl().startFocusAndMetering(new FocusMeteringAction
+                .Builder(afPoint, FocusMeteringAction.FLAG_AF)
+                .addPoint(aePoint, FocusMeteringAction.FLAG_AE)
+                .build());
+        binding.noFocusButton.setVisibility(View.VISIBLE);
+        return true;
     }
 
     private void takePicture() {
@@ -218,14 +272,11 @@ public class MainActivity extends AppCompatActivity {
         orientationEventListener.enable();
 
         cameraProvider.unbindAll();
-        Camera camera = cameraProvider.bindToLifecycle((LifecycleOwner) this, cameraSelector,
+        camera = cameraProvider.bindToLifecycle((LifecycleOwner) this, cameraSelector,
                 preview, imageAnalysis, imageCapture);
         preview.setSurfaceProvider(binding.previewView.createSurfaceProvider());
     }
 
-    /*private void setUpTapToFocus(MotionEvent event) {
-        final float x = (event != null) ? event.getX() : getV
-    }*/
 
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {

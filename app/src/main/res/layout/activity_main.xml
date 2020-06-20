@@ -41,6 +41,15 @@
             android:layout_marginTop="20dp"
             android:background="@null"
             app:srcCompat="@mipmap/ic_flash_off" />
+
+        <ImageButton
+            android:id="@+id/no_focus_button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:background="@null"
+            android:visibility="gone"
+            app:srcCompat="@mipmap/ic_no_focus" />
     </LinearLayout>
 
 </FrameLayout>
