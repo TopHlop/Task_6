@@ -17,10 +17,8 @@
         android:theme="@style/AppTheme">
         <activity android:name=".SaveImageActivity"/>
         <activity android:name=".MainActivity"
-            android:screenOrientation="fullUser"
-            android:configChanges="orientation|keyboardHidden|screenSize"
-            android:rotationAnimation="seamless"
-            tools:targetApi="O">
+            android:screenOrientation="portrait"
+            tools:ignore="LockedOrientationActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

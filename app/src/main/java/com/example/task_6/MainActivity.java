@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.PermissionChecker;
 import androidx.lifecycle.LifecycleOwner;
 
+import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -40,6 +41,8 @@ import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.FrameLayout;
 
 import com.example.task_6.databinding.ActivityMainBinding;
@@ -55,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA",
             "android.permission.WRITE_EXTERNAL_STORAGE"};
     public static final String TEMP_IMAGE = "temp.jpg";
+    private int lastRotation = Surface.ROTATION_0;
 
     private ProcessCameraProvider cameraProvider;
     private Camera camera;
@@ -74,7 +78,6 @@ public class MainActivity extends AppCompatActivity {
                     REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         } else {
             initializeViews();
-            setGravityButtonDependingOnOrientation();
             startCamera();
         }
 
@@ -308,6 +311,7 @@ public class MainActivity extends AppCompatActivity {
                 } else {
                     rotation = Surface.ROTATION_0;
                 }
+                startAnimationRotation(orientation);
                 imageCapture.setTargetRotation(rotation);
             }
         };
@@ -332,32 +336,51 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onConfigurationChanged(@NonNull Configuration newConfig) {
-        super.onConfigurationChanged(newConfig);
-        setGravityButtonDependingOnOrientation();
+    private void startAnimationRotation(int orientation) {
+        if (orientation >= 70 && orientation < 110 && lastRotation != Surface.ROTATION_90) {
+            if(lastRotation == Surface.ROTATION_0) {
+                rotateButtons(-90);
+            } else if(lastRotation == Surface.ROTATION_180) {
+                rotateButtons(90);
+            }
+            lastRotation = Surface.ROTATION_90;
+        } else if (orientation >= 160 && orientation < 200 && lastRotation != Surface.ROTATION_180) {
+            if(lastRotation == Surface.ROTATION_90) {
+                rotateButtons(-90);
+            } else if(lastRotation == Surface.ROTATION_270) {
+                rotateButtons(90);
+            }
+            lastRotation = Surface.ROTATION_180;
+        } else if (orientation >= 250 && orientation < 290 && lastRotation != Surface.ROTATION_270) {
+            if(lastRotation == Surface.ROTATION_0) {
+                rotateButtons(90);
+            } else if(lastRotation == Surface.ROTATION_180) {
+                rotateButtons(-90);
+            }
+            lastRotation = Surface.ROTATION_270;
+        } else if ((orientation >= 340 || orientation < 20) && lastRotation != Surface.ROTATION_0) {
+            if(lastRotation == Surface.ROTATION_90) {
+                rotateButtons(90);
+            } else if (lastRotation == Surface.ROTATION_270) {
+                rotateButtons(-90);
+            }
+            lastRotation = Surface.ROTATION_0;
+        }
     }
 
-    private void setGravityButtonDependingOnOrientation() {
-        //changed gravity of the camera button
-        switch (getWindowManager().getDefaultDisplay().getRotation()) {
-            case Surface.ROTATION_0:
-            case Surface.ROTATION_180: {
-                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams
-                        (ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                layoutParams.gravity = Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM;
-                binding.cameraButton.setLayoutParams(layoutParams);
-                break;
-            }
-            case Surface.ROTATION_90:
-            case Surface.ROTATION_270: {
-                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams
-                        (ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                layoutParams.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
-                binding.cameraButton.setLayoutParams(layoutParams);
-                break;
-            }
-        }
+    private void rotateButtons(float rotateDegrees) {
+        rotateButton(rotateDegrees, binding.cameraViewButton);
+        rotateButton(rotateDegrees, binding.cameraButton);
+        rotateButton(rotateDegrees, binding.flashButton);
+        rotateButton(rotateDegrees, binding.noFocusButton);
+    }
+
+    private void rotateButton(float rotateDegrees, View view) {
+        float lastDegrees = view.getRotation();
+        float newDegrees = lastDegrees + rotateDegrees;
+        ObjectAnimator.ofFloat(view, View.ROTATION, lastDegrees, newDegrees).
+                setDuration(300).start();
+        view.setRotation(newDegrees);
     }
 
     @Override
