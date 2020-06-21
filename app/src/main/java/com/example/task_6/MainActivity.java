@@ -21,6 +21,7 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.PermissionChecker;
 import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ViewModelProviders;
 
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
@@ -29,21 +30,15 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 
-import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.DisplayMetrics;
-import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.OrientationEventListener;
 import android.view.Surface;
 import android.view.View;
-import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
-import android.widget.FrameLayout;
 
 import com.example.task_6.databinding.ActivityMainBinding;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -66,6 +61,8 @@ public class MainActivity extends AppCompatActivity {
 
     private ActivityMainBinding binding;
 
+    private CameraViewModel cameraViewModel;
+
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this,
                     REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         } else {
+            cameraViewModel = ViewModelProviders.of(this).get(CameraViewModel.class);
             initializeViews();
             startCamera();
         }
@@ -91,12 +89,12 @@ public class MainActivity extends AppCompatActivity {
         binding.cameraViewButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (CameraSharedPreferences.isBackCamera(MainActivity.this)) {
-                    CameraSharedPreferences.setIsBackCamera(false, MainActivity.this);
+                if (cameraViewModel.isBackCamera()) {
+                    cameraViewModel.setBackCamera(false);
                     startCamera();
                     binding.cameraViewButton.setImageResource(R.mipmap.ic_front_camera);
                 } else {
-                    CameraSharedPreferences.setIsBackCamera(true, MainActivity.this);
+                    cameraViewModel.setBackCamera(true);
                     startCamera();
                     binding.cameraViewButton.setImageResource(R.mipmap.ic_back_camera);
                 }
@@ -106,12 +104,12 @@ public class MainActivity extends AppCompatActivity {
         binding.flashButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (CameraSharedPreferences.isCameraFlash(MainActivity.this)) {
-                    CameraSharedPreferences.setIsCameraFlash(false, MainActivity.this);
+                if (cameraViewModel.isCameraFlash()) {
+                    cameraViewModel.setCameraFlash(false);
                     imageCapture.setFlashMode(ImageCapture.FLASH_MODE_OFF);
                     binding.flashButton.setImageResource(R.mipmap.ic_flash_off);
                 } else {
-                    CameraSharedPreferences.setIsCameraFlash(true, MainActivity.this);
+                    cameraViewModel.setCameraFlash(true);
                     imageCapture.setFlashMode(ImageCapture.FLASH_MODE_ON);
                     binding.flashButton.setImageResource(R.mipmap.ic_flash_on);
                 }
@@ -182,10 +180,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initializeViews() {
-        binding.flashButton.setImageResource(CameraSharedPreferences.isCameraFlash(MainActivity.this) ?
+        binding.flashButton.setImageResource(cameraViewModel.isCameraFlash() ?
                 R.mipmap.ic_flash_on :
                 R.mipmap.ic_flash_off);
-        binding.cameraViewButton.setImageResource(CameraSharedPreferences.isBackCamera(MainActivity.this) ?
+        binding.cameraViewButton.setImageResource(cameraViewModel.isBackCamera() ?
                 R.mipmap.ic_back_camera :
                 R.mipmap.ic_front_camera);
     }
@@ -277,7 +275,7 @@ public class MainActivity extends AppCompatActivity {
                 .build();
 
         CameraSelector cameraSelector = new CameraSelector.Builder()
-                .requireLensFacing(CameraSharedPreferences.isBackCamera(MainActivity.this) ?
+                .requireLensFacing(cameraViewModel.isBackCamera() ?
                         CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT)
                 .build();
 
@@ -293,7 +291,7 @@ public class MainActivity extends AppCompatActivity {
 
         imageCapture = builder
                 .setTargetAspectRatio(aspectRatio)
-                .setFlashMode(CameraSharedPreferences.isCameraFlash(MainActivity.this) ?
+                .setFlashMode(cameraViewModel.isCameraFlash() ?
                         ImageCapture.FLASH_MODE_ON : ImageCapture.FLASH_MODE_OFF)
                 .build();
 
@@ -399,6 +397,8 @@ public class MainActivity extends AppCompatActivity {
         if (cameraProvider != null) {
             cameraProvider.unbindAll();
         }
+        CameraSharedPreferences.saveSettings(this, cameraViewModel.isBackCamera(),
+                cameraViewModel.isCameraFlash());
     }
 
 }
