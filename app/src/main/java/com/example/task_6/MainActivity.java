@@ -68,7 +68,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-        CameraSharedPreferences.loadSettings(this);
 
         if (!allPermissionsGranted()) {
             ActivityCompat.requestPermissions(this,
@@ -89,12 +88,12 @@ public class MainActivity extends AppCompatActivity {
         binding.cameraViewButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (CameraSharedPreferences.isBackCamera()) {
-                    CameraSharedPreferences.setIsBackCamera(false);
+                if (CameraSharedPreferences.isBackCamera(MainActivity.this)) {
+                    CameraSharedPreferences.setIsBackCamera(false, MainActivity.this);
                     startCamera();
                     binding.cameraViewButton.setImageResource(R.mipmap.ic_front_camera);
                 } else {
-                    CameraSharedPreferences.setIsBackCamera(true);
+                    CameraSharedPreferences.setIsBackCamera(true, MainActivity.this);
                     startCamera();
                     binding.cameraViewButton.setImageResource(R.mipmap.ic_back_camera);
                 }
@@ -104,12 +103,12 @@ public class MainActivity extends AppCompatActivity {
         binding.flashButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (CameraSharedPreferences.isCameraFlash()) {
-                    CameraSharedPreferences.setIsCameraFlash(false);
+                if (CameraSharedPreferences.isCameraFlash(MainActivity.this)) {
+                    CameraSharedPreferences.setIsCameraFlash(false, MainActivity.this);
                     imageCapture.setFlashMode(ImageCapture.FLASH_MODE_OFF);
                     binding.flashButton.setImageResource(R.mipmap.ic_flash_off);
                 } else {
-                    CameraSharedPreferences.setIsCameraFlash(true);
+                    CameraSharedPreferences.setIsCameraFlash(true, MainActivity.this);
                     imageCapture.setFlashMode(ImageCapture.FLASH_MODE_ON);
                     binding.flashButton.setImageResource(R.mipmap.ic_flash_on);
                 }
@@ -180,10 +179,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initializeViews() {
-        binding.flashButton.setImageResource(CameraSharedPreferences.isCameraFlash() ?
+        binding.flashButton.setImageResource(CameraSharedPreferences.isCameraFlash(MainActivity.this) ?
                 R.mipmap.ic_flash_on :
                 R.mipmap.ic_flash_off);
-        binding.cameraViewButton.setImageResource(CameraSharedPreferences.isBackCamera() ?
+        binding.cameraViewButton.setImageResource(CameraSharedPreferences.isBackCamera(MainActivity.this) ?
                 R.mipmap.ic_back_camera :
                 R.mipmap.ic_front_camera);
     }
@@ -275,7 +274,7 @@ public class MainActivity extends AppCompatActivity {
                 .build();
 
         CameraSelector cameraSelector = new CameraSelector.Builder()
-                .requireLensFacing(CameraSharedPreferences.isBackCamera() ?
+                .requireLensFacing(CameraSharedPreferences.isBackCamera(MainActivity.this) ?
                         CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT)
                 .build();
 
@@ -291,7 +290,7 @@ public class MainActivity extends AppCompatActivity {
 
         imageCapture = builder
                 .setTargetAspectRatio(aspectRatio)
-                .setFlashMode(CameraSharedPreferences.isCameraFlash() ?
+                .setFlashMode(CameraSharedPreferences.isCameraFlash(MainActivity.this) ?
                         ImageCapture.FLASH_MODE_ON : ImageCapture.FLASH_MODE_OFF)
                 .build();
 
@@ -369,18 +368,6 @@ public class MainActivity extends AppCompatActivity {
         } else {
             return super.onKeyDown(keyCode, event);
         }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        CameraSharedPreferences.saveSettings(this);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        CameraSharedPreferences.loadSettings(this);
     }
 
     @Override
