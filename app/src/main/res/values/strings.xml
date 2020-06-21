@@ -1,9 +1,18 @@
 <resources>
-    <string name="app_name">Task_6</string>
+    <string name="app_name">Camera</string>
     <string name="save_button">Save</string>
     <string name="cancel_button">Cancel</string>
     <string name="ok_button">OK</string>
     <string name="save_dialog_text">Enter image name:</string>
-    <string name="file_name_use_message">File name is already in use.</string>
+    <string name="file_name_use_message">File name is already in use</string>
     <string name="saved_successfully">Image saved successfully</string>
+    <string name="message_camera_permission_alert_dialog">Without CAMERA permission  the app is unable
+        to use the device\'s camera and cannot work.
+        Are you sure you want to deny this permission?</string>
+    <string name="message_write_storage_permission_alert_dialog">Without WRITE_STORAGE permission
+        the app is unable to save picture to device and cannot work.
+        Are you sure you want to deny this permission?</string>
+    <string name="title_permission_alert_dialog">Permission denied</string>
+    <string name="sure_button">I\'m sure</string>
+    <string name="set_permission_button">Set permission</string>
 </resources>

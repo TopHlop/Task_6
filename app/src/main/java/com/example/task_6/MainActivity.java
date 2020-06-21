@@ -1,6 +1,7 @@
 package com.example.task_6;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.camera.core.AspectRatio;
 import androidx.camera.core.Camera;
@@ -18,15 +19,19 @@ import androidx.camera.extensions.HdrImageCaptureExtender;
 import androidx.camera.lifecycle.ProcessCameraProvider;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.content.PermissionChecker;
 import androidx.lifecycle.LifecycleOwner;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 
 import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -36,7 +41,6 @@ import android.view.Surface;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
-import android.widget.Toast;
 
 import com.example.task_6.databinding.ActivityMainBinding;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -66,13 +70,13 @@ public class MainActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
         CameraSharedPreferences.loadSettings(this);
 
-        if (allPermissionsGranted()) {
-            startCamera();
-            initializeViews();
-            setGravityButtonDependingOnOrientation();
-        } else {
+        if (!allPermissionsGranted()) {
             ActivityCompat.requestPermissions(this,
                     REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
+        } else {
+            initializeViews();
+            setGravityButtonDependingOnOrientation();
+            startCamera();
         }
 
         binding.cameraButton.setOnClickListener(new View.OnClickListener() {
@@ -115,14 +119,16 @@ public class MainActivity extends AppCompatActivity {
         binding.previewView.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                switch (event.getAction()){
+                switch (event.getAction()) {
                     case MotionEvent.ACTION_DOWN: {
                         return true;
                     }
                     case MotionEvent.ACTION_UP: {
                         return focus(event);
                     }
-                    default: {return false;}
+                    default: {
+                        return false;
+                    }
                 }
             }
         });
@@ -199,12 +205,47 @@ public class MainActivity extends AppCompatActivity {
             if (allPermissionsGranted()) {
                 startCamera();
             } else {
-                Toast.makeText(this,
-                        "Permissions not granted by the user.",
-                        Toast.LENGTH_SHORT).show();
-                finish();
+                //true - alert dialog is already show for other permission
+                //false - alert dialog not shown
+                boolean isAlertDialog = false;
+                for (String permission : REQUIRED_PERMISSIONS) {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+                        finish();
+                    } else if (PermissionChecker.checkCallingOrSelfPermission(this, permission) !=
+                            PermissionChecker.PERMISSION_GRANTED) {
+                        if (!isAlertDialog) {
+                            showPermissionAlertDialog(permission);
+                            isAlertDialog = true;
+                        }
+                    }
+                }
             }
         }
+    }
+
+    private void showPermissionAlertDialog(String permission) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(permission.equals(REQUIRED_PERMISSIONS[0]) ?
+                R.string.message_camera_permission_alert_dialog :
+                R.string.message_write_storage_permission_alert_dialog)
+                .setTitle(R.string.title_permission_alert_dialog)
+                .setPositiveButton(R.string.sure_button, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                })
+                .setNegativeButton(R.string.set_permission_button, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:" + MainActivity.this.getPackageName())));
+                        finish();
+                    }
+                })
+                .setCancelable(false);
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
     }
 
     private void startCamera() {
@@ -280,15 +321,14 @@ public class MainActivity extends AppCompatActivity {
         preview.setSurfaceProvider(binding.previewView.createSurfaceProvider());
     }
 
-    private int getAspectRatio(){
+    private int getAspectRatio() {
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         int width = metrics.widthPixels;
         int height = metrics.heightPixels;
         double previewRatio = Math.max(width, height) * 1.0 / Math.min(width, height);
-        if(Math.abs(previewRatio - 4.0 / 3.0) <= Math.abs(previewRatio - 16.0 / 9.0)) {
+        if (Math.abs(previewRatio - 4.0 / 3.0) <= Math.abs(previewRatio - 16.0 / 9.0)) {
             return AspectRatio.RATIO_4_3;
-        }
-        else {
+        } else {
             return AspectRatio.RATIO_16_9;
         }
     }
@@ -346,7 +386,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        cameraProvider.unbindAll();
+        if (cameraProvider != null) {
+            cameraProvider.unbindAll();
+        }
     }
 
 }

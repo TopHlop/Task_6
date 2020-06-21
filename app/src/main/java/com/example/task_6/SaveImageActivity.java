@@ -62,7 +62,7 @@ public class SaveImageActivity extends AppCompatActivity {
                                 File saveImage = new File(SAVE_IMAGE_PATH +
                                         saveImageBinding.saveDialogEditText.getText().toString() +
                                         ".jpg");
-                                if(saveImage.exists()) {
+                                if (saveImage.exists()) {
                                     Toast toast = Toast.makeText(SaveImageActivity.this,
                                             R.string.file_name_use_message, Toast.LENGTH_SHORT);
                                     toast.show();
@@ -70,7 +70,7 @@ public class SaveImageActivity extends AppCompatActivity {
                                     copyTempImage(saveImage, tempImage);
                                     galleryAddPic(saveImage);
                                     Toast toast = Toast.makeText(SaveImageActivity.this,
-                                           R.string.saved_successfully, Toast.LENGTH_SHORT);
+                                            R.string.saved_successfully, Toast.LENGTH_SHORT);
                                     toast.show();
                                     finishActivity(tempImage);
                                 }
@@ -98,8 +98,8 @@ public class SaveImageActivity extends AppCompatActivity {
     }
 
     private void copyTempImage(File saveImage, File tempImage) {
-        try(FileChannel source = new FileInputStream(tempImage).getChannel();
-            FileChannel destination = new FileOutputStream(saveImage).getChannel()) {
+        try (FileChannel source = new FileInputStream(tempImage).getChannel();
+             FileChannel destination = new FileOutputStream(saveImage).getChannel()) {
             destination.transferFrom(source, 0, source.size());
         } catch (IOException exception) {
             exception.printStackTrace();
