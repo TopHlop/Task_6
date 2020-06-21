@@ -2,12 +2,11 @@ package com.example.task_6;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.AspectRatio;
 import androidx.camera.core.Camera;
-import androidx.camera.core.CameraControl;
 import androidx.camera.core.CameraInfoUnavailableException;
 import androidx.camera.core.CameraSelector;
 import androidx.camera.core.FocusMeteringAction;
-import androidx.camera.core.FocusMeteringResult;
 import androidx.camera.core.ImageAnalysis;
 import androidx.camera.core.ImageCapture;
 import androidx.camera.core.ImageCaptureException;
@@ -17,7 +16,6 @@ import androidx.camera.core.Preview;
 import androidx.camera.core.SurfaceOrientedMeteringPointFactory;
 import androidx.camera.extensions.HdrImageCaptureExtender;
 import androidx.camera.lifecycle.ProcessCameraProvider;
-import androidx.camera.view.TextureViewMeteringPointFactory;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
@@ -29,7 +27,7 @@ import android.content.pm.PackageManager;
 
 import android.content.res.Configuration;
 import android.os.Bundle;
-import android.util.Log;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
@@ -70,11 +68,12 @@ public class MainActivity extends AppCompatActivity {
 
         if (allPermissionsGranted()) {
             startCamera();
+            initializeViews();
+            setGravityButtonDependingOnOrientation();
         } else {
             ActivityCompat.requestPermissions(this,
                     REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
         }
-        initializeViews();
 
         binding.cameraButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -135,8 +134,6 @@ public class MainActivity extends AppCompatActivity {
                 binding.noFocusButton.setVisibility(View.GONE);
             }
         });
-
-        setGravityButtonDependingOnOrientation();
     }
 
     private boolean focus(MotionEvent event) {
@@ -231,13 +228,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void bindCamera(ProcessCameraProvider cameraProvider) {
-        Preview preview = new Preview.Builder().build();
+        int aspectRatio = getAspectRatio();
+        Preview preview = new Preview.Builder()
+                .setTargetAspectRatio(aspectRatio)
+                .build();
 
         CameraSelector cameraSelector = new CameraSelector.Builder()
                 .requireLensFacing(CameraSharedPreferences.isBackCamera() ?
                         CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT)
                 .build();
-        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder().build();
+
+        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+                .setTargetAspectRatio(aspectRatio)
+                .build();
         ImageCapture.Builder builder = new ImageCapture.Builder();
 
         HdrImageCaptureExtender hdrImageCaptureExtender = HdrImageCaptureExtender.create(builder);
@@ -246,7 +249,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         imageCapture = builder
-                .setTargetRotation(this.getWindowManager().getDefaultDisplay().getRotation())
+                .setTargetAspectRatio(aspectRatio)
                 .setFlashMode(CameraSharedPreferences.isCameraFlash() ?
                         ImageCapture.FLASH_MODE_ON : ImageCapture.FLASH_MODE_OFF)
                 .build();
@@ -277,6 +280,18 @@ public class MainActivity extends AppCompatActivity {
         preview.setSurfaceProvider(binding.previewView.createSurfaceProvider());
     }
 
+    private int getAspectRatio(){
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        int width = metrics.widthPixels;
+        int height = metrics.heightPixels;
+        double previewRatio = Math.max(width, height) * 1.0 / Math.min(width, height);
+        if(Math.abs(previewRatio - 4.0 / 3.0) <= Math.abs(previewRatio - 16.0 / 9.0)) {
+            return AspectRatio.RATIO_4_3;
+        }
+        else {
+            return AspectRatio.RATIO_16_9;
+        }
+    }
 
     @Override
     public void onConfigurationChanged(@NonNull Configuration newConfig) {
