@@ -337,48 +337,45 @@ public class MainActivity extends AppCompatActivity {
     private void startAnimationRotation(int orientation) {
         if (orientation >= 70 && orientation < 110 && lastRotation != Surface.ROTATION_90) {
             if (lastRotation == Surface.ROTATION_0) {
-                rotateButtons(-90);
+                rotateButtons(270, 360);
             } else if (lastRotation == Surface.ROTATION_180) {
-                rotateButtons(90);
+                rotateButtons(270, 180);
             }
             lastRotation = Surface.ROTATION_90;
         } else if (orientation >= 160 && orientation < 200 && lastRotation != Surface.ROTATION_180) {
             if (lastRotation == Surface.ROTATION_90) {
-                rotateButtons(-90);
+                rotateButtons(180, 270);
             } else if (lastRotation == Surface.ROTATION_270) {
-                rotateButtons(90);
+                rotateButtons(180, 90);
             }
             lastRotation = Surface.ROTATION_180;
         } else if (orientation >= 250 && orientation < 290 && lastRotation != Surface.ROTATION_270) {
             if (lastRotation == Surface.ROTATION_0) {
-                rotateButtons(90);
+                rotateButtons(90, 0);
             } else if (lastRotation == Surface.ROTATION_180) {
-                rotateButtons(-90);
+                rotateButtons(90, 180);
             }
             lastRotation = Surface.ROTATION_270;
         } else if ((orientation >= 340 || orientation < 20) && lastRotation != Surface.ROTATION_0) {
             if (lastRotation == Surface.ROTATION_90) {
-                rotateButtons(90);
+                rotateButtons(360, 270);
             } else if (lastRotation == Surface.ROTATION_270) {
-                rotateButtons(-90);
+                rotateButtons(0, 90);
             }
             lastRotation = Surface.ROTATION_0;
         }
     }
 
-    private void rotateButtons(float rotateDegrees) {
-        rotateButton(rotateDegrees, binding.cameraViewButton);
-        rotateButton(rotateDegrees, binding.cameraButton);
-        rotateButton(rotateDegrees, binding.flashButton);
-        rotateButton(rotateDegrees, binding.noFocusButton);
+    private void rotateButtons(float targetDegrees, float lastDegrees) {
+        rotateButton(targetDegrees, lastDegrees, binding.cameraViewButton);
+        rotateButton(targetDegrees, lastDegrees, binding.cameraButton);
+        rotateButton(targetDegrees, lastDegrees, binding.flashButton);
+        rotateButton(targetDegrees, lastDegrees, binding.noFocusButton);
     }
 
-    private void rotateButton(float rotateDegrees, View view) {
-        float lastDegrees = view.getRotation();
-        float newDegrees = lastDegrees + rotateDegrees;
-        ObjectAnimator.ofFloat(view, View.ROTATION, lastDegrees, newDegrees).
+    private void rotateButton(float targetDegrees, float lastDegrees, View view) {
+        ObjectAnimator.ofFloat(view, View.ROTATION, lastDegrees, targetDegrees).
                 setDuration(300).start();
-        view.setRotation(newDegrees);
     }
 
     @Override
