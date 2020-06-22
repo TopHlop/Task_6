@@ -1,14 +1,408 @@
 package com.example.task_6;
 
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.camera.core.AspectRatio;
+import androidx.camera.core.Camera;
+import androidx.camera.core.CameraInfoUnavailableException;
+import androidx.camera.core.CameraSelector;
+import androidx.camera.core.FocusMeteringAction;
+import androidx.camera.core.ImageAnalysis;
+import androidx.camera.core.ImageCapture;
+import androidx.camera.core.ImageCaptureException;
+import androidx.camera.core.MeteringPoint;
+import androidx.camera.core.MeteringPointFactory;
+import androidx.camera.core.Preview;
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory;
+import androidx.camera.extensions.HdrImageCaptureExtender;
+import androidx.camera.lifecycle.ProcessCameraProvider;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.PermissionChecker;
+import androidx.lifecycle.LifecycleOwner;
+import androidx.lifecycle.ViewModelProviders;
 
+import android.animation.ObjectAnimator;
+import android.annotation.SuppressLint;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.Settings;
+import android.util.DisplayMetrics;
+import android.view.KeyEvent;
+import android.view.MotionEvent;
+import android.view.OrientationEventListener;
+import android.view.Surface;
+import android.view.View;
+
+import com.example.task_6.databinding.ActivityMainBinding;
+import com.google.common.util.concurrent.ListenableFuture;
+
+import java.io.File;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final int REQUEST_CODE_PERMISSIONS = 101;
+    private static final String[] REQUIRED_PERMISSIONS = new String[]{"android.permission.CAMERA",
+            "android.permission.WRITE_EXTERNAL_STORAGE"};
+    public static final String TEMP_IMAGE = "temp.jpg";
+    private int lastRotation = Surface.ROTATION_0;
+
+    private ProcessCameraProvider cameraProvider;
+    private Camera camera;
+    private ImageCapture imageCapture;
+
+    private ActivityMainBinding binding;
+
+    private CameraViewModel cameraViewModel;
+
+    @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        if (!allPermissionsGranted()) {
+            ActivityCompat.requestPermissions(this,
+                    REQUIRED_PERMISSIONS, REQUEST_CODE_PERMISSIONS);
+        } else {
+            cameraViewModel = ViewModelProviders.of(this).get(CameraViewModel.class);
+            initializeViews();
+            startCamera();
+        }
+
+        binding.cameraButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                takePicture();
+            }
+        });
+
+        binding.cameraViewButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (cameraViewModel.isBackCamera()) {
+                    cameraViewModel.setBackCamera(false);
+                    startCamera();
+                    binding.cameraViewButton.setImageResource(R.mipmap.ic_front_camera);
+                } else {
+                    cameraViewModel.setBackCamera(true);
+                    startCamera();
+                    binding.cameraViewButton.setImageResource(R.mipmap.ic_back_camera);
+                }
+            }
+        });
+
+        binding.flashButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (cameraViewModel.isCameraFlash()) {
+                    cameraViewModel.setCameraFlash(false);
+                    imageCapture.setFlashMode(ImageCapture.FLASH_MODE_OFF);
+                    binding.flashButton.setImageResource(R.mipmap.ic_flash_off);
+                } else {
+                    cameraViewModel.setCameraFlash(true);
+                    imageCapture.setFlashMode(ImageCapture.FLASH_MODE_ON);
+                    binding.flashButton.setImageResource(R.mipmap.ic_flash_on);
+                }
+            }
+        });
+
+        binding.previewView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                switch (event.getAction()) {
+                    case MotionEvent.ACTION_DOWN: {
+                        return true;
+                    }
+                    case MotionEvent.ACTION_UP: {
+                        return focus(event);
+                    }
+                    default: {
+                        return false;
+                    }
+                }
+            }
+        });
+
+        binding.noFocusButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                camera.getCameraControl().cancelFocusAndMetering();
+                binding.noFocusButton.setVisibility(View.GONE);
+            }
+        });
     }
+
+    private boolean focus(MotionEvent event) {
+        final float x = event.getX();
+        final float y = event.getY();
+        MeteringPointFactory factory = new SurfaceOrientedMeteringPointFactory(
+                binding.previewView.getWidth(), binding.previewView.getHeight());
+        float afPointWidth = 1.0f / 6.0f;
+        float aePointWidth = afPointWidth * 1.5f;
+        MeteringPoint afPoint = factory.createPoint(x, y, afPointWidth);
+        MeteringPoint aePoint = factory.createPoint(x, y, aePointWidth);
+
+        camera.getCameraControl().startFocusAndMetering(new FocusMeteringAction
+                .Builder(afPoint, FocusMeteringAction.FLAG_AF)
+                .addPoint(aePoint, FocusMeteringAction.FLAG_AE)
+                .build());
+        binding.noFocusButton.setVisibility(View.VISIBLE);
+        return true;
+    }
+
+    private void takePicture() {
+        File tempFile = new File(getApplication().getCacheDir(), TEMP_IMAGE);
+        ImageCapture.OutputFileOptions outputFileOptions =
+                new ImageCapture.OutputFileOptions.Builder(tempFile).build();
+        imageCapture.takePicture(outputFileOptions, Executors.newSingleThreadExecutor(), new ImageCapture.OnImageSavedCallback() {
+            @Override
+            public void onImageSaved(@NonNull ImageCapture.OutputFileResults outputFileResults) {
+                Intent intent = new Intent(MainActivity.this, SaveImageActivity.class);
+                startActivity(intent);
+                finish();
+            }
+
+            @Override
+            public void onError(@NonNull ImageCaptureException exception) {
+                exception.printStackTrace();
+            }
+        });
+    }
+
+    private void initializeViews() {
+        binding.flashButton.setImageResource(cameraViewModel.isCameraFlash() ?
+                R.mipmap.ic_flash_on :
+                R.mipmap.ic_flash_off);
+        binding.cameraViewButton.setImageResource(cameraViewModel.isBackCamera() ?
+                R.mipmap.ic_back_camera :
+                R.mipmap.ic_front_camera);
+    }
+
+    private boolean allPermissionsGranted() {
+        for (String permission : REQUIRED_PERMISSIONS) {
+            if (ContextCompat.checkSelfPermission(getApplicationContext(), permission) !=
+                    PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        if (requestCode == REQUEST_CODE_PERMISSIONS) {
+            if (allPermissionsGranted()) {
+                startCamera();
+            } else {
+                //true - alert dialog is already show for other permission
+                //false - alert dialog not shown
+                boolean isAlertDialog = false;
+                for (String permission : REQUIRED_PERMISSIONS) {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+                        finish();
+                    } else if (PermissionChecker.checkCallingOrSelfPermission(this, permission) !=
+                            PermissionChecker.PERMISSION_GRANTED) {
+                        if (!isAlertDialog) {
+                            showPermissionAlertDialog(permission);
+                            isAlertDialog = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void showPermissionAlertDialog(String permission) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage(permission.equals(REQUIRED_PERMISSIONS[0]) ?
+                R.string.message_camera_permission_alert_dialog :
+                R.string.message_write_storage_permission_alert_dialog)
+                .setTitle(R.string.title_permission_alert_dialog)
+                .setPositiveButton(R.string.sure_button, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        finish();
+                    }
+                })
+                .setNegativeButton(R.string.set_permission_button, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:" + MainActivity.this.getPackageName())));
+                        finish();
+                    }
+                })
+                .setCancelable(false);
+        AlertDialog alertDialog = builder.create();
+        alertDialog.show();
+    }
+
+    private void startCamera() {
+        final ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
+                ProcessCameraProvider.getInstance(this);
+        cameraProviderFuture.addListener(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    cameraProvider = cameraProviderFuture.get();
+                    //Front camera check
+                    if (!cameraProvider.hasCamera(CameraSelector.DEFAULT_FRONT_CAMERA)) {
+                        binding.cameraViewButton.setEnabled(false);
+                    }
+                    bindCamera(cameraProvider);
+                } catch (ExecutionException | InterruptedException | CameraInfoUnavailableException e) {
+                    e.printStackTrace();
+                }
+            }
+        }, ContextCompat.getMainExecutor(this));
+    }
+
+    private void bindCamera(ProcessCameraProvider cameraProvider) {
+        int aspectRatio = getAspectRatio();
+        Preview preview = new Preview.Builder()
+                .setTargetAspectRatio(aspectRatio)
+                .build();
+
+        CameraSelector cameraSelector = new CameraSelector.Builder()
+                .requireLensFacing(cameraViewModel.isBackCamera() ?
+                        CameraSelector.LENS_FACING_BACK : CameraSelector.LENS_FACING_FRONT)
+                .build();
+
+        ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
+                .setTargetAspectRatio(aspectRatio)
+                .build();
+        ImageCapture.Builder builder = new ImageCapture.Builder();
+
+        HdrImageCaptureExtender hdrImageCaptureExtender = HdrImageCaptureExtender.create(builder);
+        if (hdrImageCaptureExtender.isExtensionAvailable(cameraSelector)) {
+            hdrImageCaptureExtender.enableExtension(cameraSelector);
+        }
+
+        imageCapture = builder
+                .setTargetAspectRatio(aspectRatio)
+                .setFlashMode(cameraViewModel.isCameraFlash() ?
+                        ImageCapture.FLASH_MODE_ON : ImageCapture.FLASH_MODE_OFF)
+                .build();
+
+        OrientationEventListener orientationEventListener = new OrientationEventListener((Context) this) {
+            @Override
+            public void onOrientationChanged(int orientation) {
+                int rotation;
+
+                if (orientation >= 45 && orientation < 135) {
+                    rotation = Surface.ROTATION_270;
+                } else if (orientation >= 135 && orientation < 225) {
+                    rotation = Surface.ROTATION_180;
+                } else if (orientation >= 225 && orientation < 315) {
+                    rotation = Surface.ROTATION_90;
+                } else {
+                    rotation = Surface.ROTATION_0;
+                }
+                startAnimationRotation(orientation);
+                imageCapture.setTargetRotation(rotation);
+            }
+        };
+
+        orientationEventListener.enable();
+
+        cameraProvider.unbindAll();
+        camera = cameraProvider.bindToLifecycle((LifecycleOwner) this, cameraSelector,
+                preview, imageAnalysis, imageCapture);
+        preview.setSurfaceProvider(binding.previewView.createSurfaceProvider());
+    }
+
+    private int getAspectRatio() {
+        DisplayMetrics metrics = getResources().getDisplayMetrics();
+        int width = metrics.widthPixels;
+        int height = metrics.heightPixels;
+        double previewRatio = Math.max(width, height) * 1.0 / Math.min(width, height);
+        if (Math.abs(previewRatio - 4.0 / 3.0) <= Math.abs(previewRatio - 16.0 / 9.0)) {
+            return AspectRatio.RATIO_4_3;
+        } else {
+            return AspectRatio.RATIO_16_9;
+        }
+    }
+
+    private void startAnimationRotation(int orientation) {
+        if (orientation >= 70 && orientation < 110 && lastRotation != Surface.ROTATION_90) {
+            if (lastRotation == Surface.ROTATION_0) {
+                rotateButtons(270, 360);
+            } else if (lastRotation == Surface.ROTATION_180) {
+                rotateButtons(270, 180);
+            } else if (lastRotation == Surface.ROTATION_270) {
+                rotateButtons(270, 90);
+            }
+            lastRotation = Surface.ROTATION_90;
+        } else if (orientation >= 160 && orientation < 200 && lastRotation != Surface.ROTATION_180) {
+            if (lastRotation == Surface.ROTATION_90) {
+                rotateButtons(180, 270);
+            } else if (lastRotation == Surface.ROTATION_270) {
+                rotateButtons(180, 90);
+            } else if (lastRotation == Surface.ROTATION_0) {
+                rotateButtons(180, 0);
+            }
+            lastRotation = Surface.ROTATION_180;
+        } else if (orientation >= 250 && orientation < 290 && lastRotation != Surface.ROTATION_270) {
+            if (lastRotation == Surface.ROTATION_0) {
+                rotateButtons(90, 0);
+            } else if (lastRotation == Surface.ROTATION_180) {
+                rotateButtons(90, 180);
+            } else if (lastRotation == Surface.ROTATION_90) {
+                rotateButtons(90, 270);
+            }
+            lastRotation = Surface.ROTATION_270;
+        } else if ((orientation >= 340 || orientation < 20) && lastRotation != Surface.ROTATION_0) {
+            if (lastRotation == Surface.ROTATION_90) {
+                rotateButtons(360, 270);
+            } else if (lastRotation == Surface.ROTATION_270) {
+                rotateButtons(0, 90);
+            } else if (lastRotation == Surface.ROTATION_180) {
+                rotateButtons(0, 180);
+            }
+            lastRotation = Surface.ROTATION_0;
+        }
+    }
+
+    private void rotateButtons(float targetDegrees, float lastDegrees) {
+        rotateButton(targetDegrees, lastDegrees, binding.cameraViewButton);
+        rotateButton(targetDegrees, lastDegrees, binding.cameraButton);
+        rotateButton(targetDegrees, lastDegrees, binding.flashButton);
+        rotateButton(targetDegrees, lastDegrees, binding.noFocusButton);
+    }
+
+    private void rotateButton(float targetDegrees, float lastDegrees, View view) {
+        ObjectAnimator.ofFloat(view, View.ROTATION, lastDegrees, targetDegrees).
+                setDuration(300).start();
+    }
+
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            takePicture();
+            return true;
+        } else {
+            return super.onKeyDown(keyCode, event);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (cameraProvider != null) {
+            cameraProvider.unbindAll();
+        }
+        cameraViewModel.saveSettings();
+    }
+
 }
