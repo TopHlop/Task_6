@@ -11,7 +11,7 @@ public class CameraSharedPreferences {
     private static SharedPreferences storageSettings;
 
     public static void saveSettings(Context context, boolean isBackCamera, boolean isCameraFlash) {
-        storageSettings = context.getSharedPreferences(CAMERA_SHARED_PREFERENCES, Context.MODE_PRIVATE);
+        getStorageSettings(context);
         SharedPreferences.Editor ed = storageSettings.edit();
         ed.putBoolean(CAMERA_SELECTOR_SHARED_PREFERENCE, isBackCamera);
         ed.putBoolean(CAMERA_FLASH_PREFERENCES, isCameraFlash);
@@ -20,14 +20,19 @@ public class CameraSharedPreferences {
 
 
     public static boolean isBackCamera(Context context) {
-        storageSettings = context.getSharedPreferences(CAMERA_SHARED_PREFERENCES, Context.MODE_PRIVATE);
+        getStorageSettings(context);
         return storageSettings.getBoolean(CAMERA_SELECTOR_SHARED_PREFERENCE, true);
     }
 
 
     public static boolean isCameraFlash(Context context) {
-        storageSettings = context.getSharedPreferences(CAMERA_SHARED_PREFERENCES, Context.MODE_PRIVATE);
+        getStorageSettings(context);
         return storageSettings.getBoolean(CAMERA_FLASH_PREFERENCES, false);
     }
 
+    private static void getStorageSettings(Context context) {
+        if (storageSettings == null) {
+            storageSettings = context.getSharedPreferences(CAMERA_SHARED_PREFERENCES, Context.MODE_PRIVATE);
+        }
+    }
 }

@@ -31,4 +31,8 @@ public class CameraViewModel extends AndroidViewModel {
     public void setCameraFlash(boolean cameraFlash) {
         isCameraFlash = cameraFlash;
     }
+
+    public void saveSettings() {
+        CameraSharedPreferences.saveSettings(getApplication(), isBackCamera, isCameraFlash);
+    }
 }

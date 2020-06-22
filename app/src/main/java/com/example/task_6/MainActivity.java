@@ -336,28 +336,28 @@ public class MainActivity extends AppCompatActivity {
 
     private void startAnimationRotation(int orientation) {
         if (orientation >= 70 && orientation < 110 && lastRotation != Surface.ROTATION_90) {
-            if(lastRotation == Surface.ROTATION_0) {
+            if (lastRotation == Surface.ROTATION_0) {
                 rotateButtons(-90);
-            } else if(lastRotation == Surface.ROTATION_180) {
+            } else if (lastRotation == Surface.ROTATION_180) {
                 rotateButtons(90);
             }
             lastRotation = Surface.ROTATION_90;
         } else if (orientation >= 160 && orientation < 200 && lastRotation != Surface.ROTATION_180) {
-            if(lastRotation == Surface.ROTATION_90) {
+            if (lastRotation == Surface.ROTATION_90) {
                 rotateButtons(-90);
-            } else if(lastRotation == Surface.ROTATION_270) {
+            } else if (lastRotation == Surface.ROTATION_270) {
                 rotateButtons(90);
             }
             lastRotation = Surface.ROTATION_180;
         } else if (orientation >= 250 && orientation < 290 && lastRotation != Surface.ROTATION_270) {
-            if(lastRotation == Surface.ROTATION_0) {
+            if (lastRotation == Surface.ROTATION_0) {
                 rotateButtons(90);
-            } else if(lastRotation == Surface.ROTATION_180) {
+            } else if (lastRotation == Surface.ROTATION_180) {
                 rotateButtons(-90);
             }
             lastRotation = Surface.ROTATION_270;
         } else if ((orientation >= 340 || orientation < 20) && lastRotation != Surface.ROTATION_0) {
-            if(lastRotation == Surface.ROTATION_90) {
+            if (lastRotation == Surface.ROTATION_90) {
                 rotateButtons(90);
             } else if (lastRotation == Surface.ROTATION_270) {
                 rotateButtons(-90);
@@ -397,8 +397,7 @@ public class MainActivity extends AppCompatActivity {
         if (cameraProvider != null) {
             cameraProvider.unbindAll();
         }
-        CameraSharedPreferences.saveSettings(this, cameraViewModel.isBackCamera(),
-                cameraViewModel.isCameraFlash());
+        cameraViewModel.saveSettings();
     }
 
 }
