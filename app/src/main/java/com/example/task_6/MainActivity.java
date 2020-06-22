@@ -340,6 +340,8 @@ public class MainActivity extends AppCompatActivity {
                 rotateButtons(270, 360);
             } else if (lastRotation == Surface.ROTATION_180) {
                 rotateButtons(270, 180);
+            } else if (lastRotation == Surface.ROTATION_270) {
+                rotateButtons(270, 90);
             }
             lastRotation = Surface.ROTATION_90;
         } else if (orientation >= 160 && orientation < 200 && lastRotation != Surface.ROTATION_180) {
@@ -347,6 +349,8 @@ public class MainActivity extends AppCompatActivity {
                 rotateButtons(180, 270);
             } else if (lastRotation == Surface.ROTATION_270) {
                 rotateButtons(180, 90);
+            } else if (lastRotation == Surface.ROTATION_0) {
+                rotateButtons(180, 0);
             }
             lastRotation = Surface.ROTATION_180;
         } else if (orientation >= 250 && orientation < 290 && lastRotation != Surface.ROTATION_270) {
@@ -354,6 +358,8 @@ public class MainActivity extends AppCompatActivity {
                 rotateButtons(90, 0);
             } else if (lastRotation == Surface.ROTATION_180) {
                 rotateButtons(90, 180);
+            } else if (lastRotation == Surface.ROTATION_90) {
+                rotateButtons(90, 270);
             }
             lastRotation = Surface.ROTATION_270;
         } else if ((orientation >= 340 || orientation < 20) && lastRotation != Surface.ROTATION_0) {
@@ -361,6 +367,8 @@ public class MainActivity extends AppCompatActivity {
                 rotateButtons(360, 270);
             } else if (lastRotation == Surface.ROTATION_270) {
                 rotateButtons(0, 90);
+            } else if (lastRotation == Surface.ROTATION_180) {
+                rotateButtons(0, 180);
             }
             lastRotation = Surface.ROTATION_0;
         }
